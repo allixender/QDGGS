@@ -770,8 +770,9 @@ class DGGRID:
                 meta_dict["neighbor_output_file_name"] = f"{neighbor_output_file_name}"
             
             if self.dlg.chb_children_2.isChecked():
-                meta_dict["children_output_type"] = f"{children_output_type}"
-                meta_dict["children_output_file_name"] = f"{children_output_file_name}"
+                # hierarchical children (not the spatial children_output_type)
+                meta_dict["indexing_children_output_type"] = f"{children_output_type}"
+                meta_dict["indexing_children_output_file_name"] = f"{children_output_file_name}"
             
             return meta_dict
             
@@ -992,8 +993,8 @@ class DGGRID:
                     if meta_dict.get("neighbor_output_file_name"):
                         neighbor_output_file_name = meta_dict["neighbor_output_file_name"]
                     
-                    if meta_dict.get("children_output_file_name"):
-                        children_output_file_name = meta_dict["children_output_file_name"]
+                    if meta_dict.get("indexing_children_output_file_name"):
+                        children_output_file_name = meta_dict["indexing_children_output_file_name"]
                     
                     if self.dlg.chb_neighbor_2.isChecked():
                         nbr_path = neighbor_output_file_name + ".nbr"
@@ -1014,7 +1015,7 @@ class DGGRID:
                         os.remove(nbr_path)
                     
                     if self.dlg.chb_children_2.isChecked():
-                        chd_path = children_output_file_name + ".chd"
+                        chd_path = children_output_file_name + ".ndxChd"
                         chd_out_path = self.createPath2(dtype="chd", tmp_uuid=tmp_uuid)
                         
                         if os.path.isfile(chd_path):
