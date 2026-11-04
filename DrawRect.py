@@ -1,13 +1,15 @@
 from qgis.gui import QgsRubberBand, QgsMapToolEmitPoint, QgsMapTool
 from PyQt5 import QtGui
 from qgis.core import QgsWkbTypes, QgsRectangle, QgsPointXY
+from qgis.core import QgsProject, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
-from shapely.wkt import loads
-from osgeo import ogr
-from pyproj import CRS, Transformer
-from shapely.ops import transform
 
-from qgis.core import QgsProject
+def extentToWgs84(rect, crs):
+    # returns minx, maxx, miny, maxy (ogr envelope order)
+    xform = QgsCoordinateTransform(crs, QgsCoordinateReferenceSystem("EPSG:4326"), QgsProject.instance())
+    r = xform.transformBoundingBox(rect)
+    return r.xMinimum(), r.xMaximum(), r.yMinimum(), r.yMaximum()
+
 
 class RectangleMapTool(QgsMapToolEmitPoint):
     def __init__(self, canvas, dlg):
@@ -31,22 +33,6 @@ class RectangleMapTool(QgsMapToolEmitPoint):
         self.isEmittingPoint = True
         self.showRect(self.startPoint, self.endPoint)
 
-    def getTransformedGeometry(self, geom_wkt, srs_wkt, env=False):
-        geom = loads(geom_wkt)
-        
-        from_crs = CRS.from_wkt(srs_wkt)
-        to_crs = CRS.from_epsg(4326)
-        
-        transformer = Transformer.from_crs(from_crs, to_crs, always_xy=True)
-        projected = transform(transformer.transform, geom)
-        
-        proj_geom = ogr.CreateGeometryFromWkt(projected.wkt)       
-        
-        if env:
-            return proj_geom.GetEnvelope()
-        else:
-            return proj_geom    
-    
     def canvasReleaseEvent(self, e):
         self.isEmittingPoint = False
         r = self.rectangle()
@@ -58,8 +44,7 @@ class RectangleMapTool(QgsMapToolEmitPoint):
             self.dlg.showNormal()
             
             """ ------------------ """
-            srs_wkt = QgsProject.instance().crs().toWkt()
-            minx, maxx, miny, maxy = self.getTransformedGeometry(r.asWktPolygon(), srs_wkt, env=True)
+            minx, maxx, miny, maxy = extentToWgs84(r, QgsProject.instance().crs())
                     
             self.dlg.sb_extent_minx.setValue(minx)
             self.dlg.sb_extent_miny.setValue(miny)

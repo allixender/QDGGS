@@ -30,13 +30,11 @@ from .resources import *
 # Import the code for the dialog
 from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 
-from .DrawRect import RectangleMapTool
+from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
 
 from osgeo import ogr, osr
-from pyproj import CRS, Transformer
 from shapely.wkt import loads
-from shapely.ops import transform
 import os, requests, platform, stat, subprocess, uuid, sys
 from collections import defaultdict
 from glob import glob
@@ -159,28 +157,10 @@ class DGGRID:
                 action)
             self.iface.removeToolBarIcon(action)
 
-    def getTransformedGeometry(self, geom_wkt, srs_wkt, env=False):
-        geom = loads(geom_wkt)
-        
-        from_crs = CRS.from_wkt(srs_wkt)
-        to_crs = CRS.from_epsg(4326)
-        
-        transformer = Transformer.from_crs(from_crs, to_crs, always_xy=True)
-        projected = transform(transformer.transform, geom)
-        
-        proj_geom = ogr.CreateGeometryFromWkt(projected.wkt)       
-        
-        if env:
-            return proj_geom.GetEnvelope()
-        else:
-            return proj_geom
-
     def getCanvasExtent(self):
-        canvas = QgsProject.instance()
-        srs_wkt = canvas.crs().toWkt()
         ext = self.iface.mapCanvas().extent()
-        
-        minx, maxx, miny, maxy = self.getTransformedGeometry(ext.asWktPolygon(), srs_wkt, env=True)
+
+        minx, maxx, miny, maxy = extentToWgs84(ext, QgsProject.instance().crs())
             
         self.dlg.sb_extent_minx.setValue(minx)
         self.dlg.sb_extent_miny.setValue(miny)
@@ -191,10 +171,9 @@ class DGGRID:
         layerName = self.dlg.cb_layers.currentText()
         layers = QgsProject.instance().mapLayersByName(layerName)
         if len(layers) > 0:
-            srs_wkt = layers[0].crs().toWkt()        
             ext = layers[0].extent()
-            
-            minx, maxx, miny, maxy = self.getTransformedGeometry(ext.asWktPolygon(), srs_wkt, env=True)
+
+            minx, maxx, miny, maxy = extentToWgs84(ext, layers[0].crs())
                         
             self.dlg.sb_extent_minx.setValue(minx)
             self.dlg.sb_extent_miny.setValue(miny)
