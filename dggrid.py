@@ -33,6 +33,7 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
+from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem
 
 from osgeo import ogr, osr
 import os, subprocess, uuid, sys, importlib, re
@@ -58,6 +59,17 @@ HIER_SYS = {"ISEA7H": "Z7", "IGEO7v2": "Z7", "FULLER7H": "Z7",
 def hierOutMeta(sysn):
     return {"output_address_type": "HIERNDX", "output_hier_ndx_system": sysn, "output_hier_ndx_form": "DIGIT_STRING",
             "output_cell_label_type": "OUTPUT_ADDRESS_TYPE", "shapefile_id_field_length": 40}
+
+
+def layerGeomsWgs84(layer):
+    xform = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem("EPSG:4326"), QgsProject.instance())
+    geoms = []
+    for f in layer.getFeatures():
+        if f.hasGeometry():
+            g = QgsGeometry(f.geometry())
+            g.transform(xform)
+            geoms.append(g)
+    return geoms
 
 
 def h3CellGeom(cell):
@@ -674,19 +686,10 @@ class DGGRID:
                         outfile_name = f"region_{tmp_uuid}.shp"
                         out_path = os.path.join(self.dlg.le_wdir.text(), outfile_name)
                         
-                        crs_wkt = layers[0].crs().toWkt()
-                        srs = osr.SpatialReference()
-                        srs.ImportFromWkt(crs_wkt)
-                        
-                        features = layers[0].getFeatures()
-                        
-                        wkt_list = []
+                        # dggrid reads lon/lat, ignores .prj
+                        wkt_list = [g.asWkt() for g in layerGeomsWgs84(layers[0])]
 
-                        for feat in features:
-                            wkt = feat.geometry().asWkt()
-                            wkt_list.append(wkt)
-                        
-                        self.createShapefile(wkt_list, tmp_uuid, crs_wkt=crs_wkt)
+                        self.createShapefile(wkt_list, tmp_uuid)
                         
                         clip_region_files = out_path
                         clip_subset_type = "SHAPEFILE"
@@ -862,11 +865,9 @@ class DGGRID:
                 all_cells = set()
                 geom_list = []
                 
-                if len(layers) > 0:                        
-                    features = layers[0].getFeatures()
-                    for feat in features:
-                        geom_list.append(QgsGeometry(feat.geometry()))
-                        
+                if len(layers) > 0:
+                    geom_list = layerGeomsWgs84(layers[0])
+
                     for geom in geom_list:
                         cells = self.polygon_to_h3(geom, resolution)
                         all_cells.update(cells)
