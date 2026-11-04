@@ -240,7 +240,9 @@ class DGGRID:
             res = splitted[2].removeprefix("r")
             
         try:
-            self.dlg.cb_dggstype_2.setCurrentText(dggrid_type.upper())
+            idx = self.dlg.cb_dggstype_2.findText(dggrid_type, Qt.MatchFlag.MatchFixedString)
+            if idx >= 0:
+                self.dlg.cb_dggstype_2.setCurrentIndex(idx)
         except:
             pass
         
@@ -696,7 +698,8 @@ class DGGRID:
                 "cell_output_file_name": cell_output_file_name,
                 "point_output_type": point_output_type,
                 "point_output_file_name" : point_output_file_name,
-                "longitude_wrap_mode" : "UNWRAP_EAST"
+                "longitude_wrap_mode" : "UNWRAP_EAST",
+                "output_address_type": "SEQNUM"
             }
             
             return meta_dict
@@ -740,7 +743,8 @@ class DGGRID:
                 "cell_output_file_name": cell_output_file_name,
                 "point_output_type": point_output_type,
                 "point_output_file_name" : point_output_file_name,
-                "longitude_wrap_mode" : "UNWRAP_EAST"
+                "longitude_wrap_mode" : "UNWRAP_EAST",
+                "output_address_type": "SEQNUM"
             }
             
             if self.dlg.chb_neighbor_2.isChecked():
