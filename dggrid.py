@@ -912,7 +912,7 @@ class DGGRID:
         if dgg_type == "UBER H3_t1":
             self.run_uber_h3()
 
-        if dgg_type == "UBER H3_t2":
+        elif dgg_type == "UBER H3_t2":
             output_folder_path = self.dlg.le_wdir.text()
             
             lw_cnt = self.dlg.lw_cellids.count()
