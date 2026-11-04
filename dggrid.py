@@ -280,6 +280,10 @@ class DGGRID:
         if oname == "cb_dggstype":
             dgg_type = self.dlg.cb_dggstype.currentText()
             
+            self.dlg.chb_hierndx.setEnabled(dgg_type in HIER_SYS)
+            if dgg_type not in HIER_SYS:
+                self.dlg.chb_hierndx.setChecked(False)
+
             if dgg_type == "UBER H3":
                 self.dlg.chb_metafile.setChecked(False)
                 self.dlg.chb_centroid.setChecked(False)
@@ -364,6 +368,11 @@ class DGGRID:
                     self.local_path = dggrid_exe.downloadExe()
                 except Exception as e:
                     QMessageBox.critical(None, "ERROR", f"DGGRID download failed:\n{e}")
+
+    def hierIds(self):
+        if self.dlg.tabWidget.currentIndex() == 1:
+            return True
+        return self.dlg.chb_hierndx.isChecked() and self.dlg.cb_dggstype.currentText() in HIER_SYS
 
     def runDggrid(self, meta_file_path):
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -518,7 +527,7 @@ class DGGRID:
         else:
             layer = ds.CreateLayer(layer_name, srs, ogr.wkbPoint)
 
-        hier_ids = self.dlg.tabWidget.currentIndex() == 1
+        hier_ids = self.hierIds()
         layer.CreateField(ogr.FieldDefn("global_id", ogr.OFTString if hier_ids else ogr.OFTInteger64))
         defn = layer.GetLayerDefn()
         
@@ -714,6 +723,8 @@ class DGGRID:
                 "longitude_wrap_mode" : "UNWRAP_EAST",
                 "output_address_type": "SEQNUM"
             }
+            if self.hierIds():
+                meta_dict.update(hierOutMeta(HIER_SYS[dggs_type]))
             
             return meta_dict
         

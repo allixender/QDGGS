@@ -387,7 +387,7 @@
        <x>470</x>
        <y>150</y>
        <width>130</width>
-       <height>111</height>
+       <height>128</height>
       </rect>
      </property>
      <property name="font">
@@ -439,6 +439,22 @@
       </property>
       <property name="text">
        <string>Metafile</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="chb_hierndx">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>101</y>
+        <width>115</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>hierarchical cell ids (Z7/Z3/ZORDER digit string) instead of SEQNUM</string>
+      </property>
+      <property name="text">
+       <string>Hier. index ids</string>
       </property>
      </widget>
     </widget>
