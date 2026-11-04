@@ -21,9 +21,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox, QTableWidgetItem
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QMessageBox, QTableWidgetItem, QApplication
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -35,9 +35,12 @@ from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordi
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes
 
 from osgeo import ogr, osr
-import os, requests, platform, stat, subprocess, uuid, sys
+import os, requests, platform, stat, subprocess, uuid, sys, importlib
 from collections import defaultdict
 from glob import glob
+
+from . import deps
+deps.addDepsPath()
 
 try:
     import h3
@@ -794,6 +797,31 @@ class DGGRID:
         children = h3.cell_to_children(h3_id, child_res)
         return list(children)
     
+    def ensureH3(self):
+        global h3, LatLngPoly, h3_chc
+        if h3_chc:
+            return True
+        res = QMessageBox.question(None, "h3 missing", "Python package h3 is needed for UBER H3.\n"
+                                   f"Install it now (pip) into\n{deps.depsDir()} ?")
+        if res != QMessageBox.StandardButton.Yes:
+            return False
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ok, log = deps.pipInstall(["h3"])
+        finally:
+            QApplication.restoreOverrideCursor()
+        if ok:
+            try:
+                importlib.invalidate_caches()
+                import h3
+                from h3 import LatLngPoly
+                h3_chc = 1
+            except ImportError as e:
+                ok, log = False, str(e)
+        if not ok:
+            QMessageBox.critical(None, "h3 install failed", log[-1500:] + "\n\nmanually:\n" + " ".join(deps.pipCmd(["h3"])))
+        return ok
+
     def run_uber_h3(self):
         if h3_chc == 0:
             QMessageBox.information(None, "ERROR", """H3 library is necessary for this grid type. Please install the library manually using OSGeo4W Shell and restart QGIS.\n (pip install h3)""")
@@ -853,7 +881,10 @@ class DGGRID:
             if not any([self.dlg.chb_polygon_2.isChecked(), self.dlg.chb_centroid_2.isChecked(),
                         self.dlg.chb_neighbor_2.isChecked(), self.dlg.chb_children_2.isChecked(), self.dlg.chb_metafile_2.isChecked()]):
                 QMessageBox.critical(None, "ERROR", """Output Type is not selected!""")
-                return                
+                return
+
+        if dgg_type.startswith("UBER H3") and not self.ensureH3():
+            return
 
         self.dlg.btn_execute.setText("GENERATING...")
         self.dlg.setEnabled(False)
