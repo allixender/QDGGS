@@ -40,7 +40,6 @@ from shapely.ops import transform
 import os, requests, platform, stat, subprocess, uuid, sys
 from collections import defaultdict
 from glob import glob
-import pandas as pd
 from shapely.geometry import box
 from shapely.geometry import Polygon
 
