@@ -352,8 +352,16 @@ class DGGRID:
                 except Exception as e:
                     QMessageBox.critical(None, "ERROR", f"DGGRID download failed:\n{e}")
 
-        if self.local_path:
-            self.dlg.show()
+    def setDggridAvailable(self):
+        # without dggrid only UBER H3 (python h3) works
+        ok = bool(self.local_path)
+        for cb in (self.dlg.cb_dggstype, self.dlg.cb_dggstype_2):
+            for i in range(cb.count()):
+                if cb.itemText(i) not in ("", "UBER H3"):
+                    cb.model().item(i).setEnabled(ok)
+            if not ok:
+                cb.setCurrentText("UBER H3")
+        self.dlg.pb_options.setEnabled(ok)
     
     def createShapefile(self, clip_wkts, tmp_uuid, crs_wkt=None):
         outfile_name = f"region_{tmp_uuid}.shp"
@@ -1188,6 +1196,9 @@ class DGGRID:
             self.dlg2.pb_removeline.clicked.connect(self.optionsTable)
             self.dlg2.pb_cleartable.clicked.connect(self.optionsTable)
             self.dlg2.pb_run.clicked.connect(self.optionsTable)
+
+            self.setDggridAvailable()
+            self.dlg.show()
             
             
             
