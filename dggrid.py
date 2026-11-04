@@ -35,7 +35,7 @@ from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordi
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
 
 from osgeo import ogr, osr
-import os, subprocess, uuid, sys, importlib
+import os, subprocess, uuid, sys, importlib, re
 from collections import defaultdict
 from glob import glob
 
@@ -48,6 +48,16 @@ try:
     h3_chc = 1
 except:
     h3_chc = 0
+
+
+# grids with a hierarchical index in DGGRID 9.1 (ZORDER hangs on ISEA4D/4T)
+HIER_SYS = {"ISEA7H": "Z7", "IGEO7v2": "Z7", "FULLER7H": "Z7",
+            "ISEA3H": "Z3", "FULLER3H": "Z3", "ISEA4H": "ZORDER", "FULLER4H": "ZORDER"}
+
+
+def hierOutMeta(sysn):
+    return {"output_address_type": "HIERNDX", "output_hier_ndx_system": sysn, "output_hier_ndx_form": "DIGIT_STRING",
+            "output_cell_label_type": "OUTPUT_ADDRESS_TYPE", "shapefile_id_field_length": 40}
 
 
 def h3CellGeom(cell):
@@ -221,7 +231,8 @@ class DGGRID:
                 with open(filePath) as f:
                     cell_id_txt = f.read()
             
-                cell_id_list = set([i.strip() for i in cell_id_txt.split(",") if i.strip().isnumeric()])
+                is_h3 = self.dlg.cb_dggstype_2.currentText() == "UBER H3"
+                cell_id_list = set(i for i in re.split(r"[,\s]+", cell_id_txt) if i and (is_h3 or i.isdigit()))
 
                 self.dlg.lw_cellids.addItems(sorted(cell_id_list))
     
@@ -252,6 +263,12 @@ class DGGRID:
             pass
         
         self.dlg.lw_cellids.clear()
+        try:
+            if layer.fields().field("global_id").isNumeric():
+                QMessageBox.information(None, "Message", "Layer has SEQNUM ids, cell ids need a hierarchical index (Z7/Z3/ZORDER).")
+                return
+        except:
+            pass
         for f in features:
             value = f.attribute("global_id")            
             self.dlg.lw_cellids.addItem(str(value))
@@ -294,17 +311,11 @@ class DGGRID:
                 
                 self.dlg.sb_resolution_2.setMaximum(15)
                 
-                self.dlg.sb_cellid.setVisible(False)
-                self.dlg.le_cellid.setVisible(True)
-                
             else:
                 self.dlg.chb_centroid_2.setEnabled(True)
                 self.dlg.chb_metafile_2.setEnabled(True)
                 
                 self.dlg.sb_resolution_2.setMaximum(35)
-                
-                self.dlg.sb_cellid.setVisible(True)
-                self.dlg.le_cellid.setVisible(False)
     
     def outFolderCheck(self):
         folder_path = self.dlg.le_wdir.text()
@@ -316,21 +327,21 @@ class DGGRID:
         
 
     def addCellId(self):
-        if self.dlg.cb_dggstype_2.currentText() == "UBER H3":
-            value = self.dlg.le_cellid.text()
-            self.dlg.lw_cellids.addItem(str(value))
-            self.dlg.le_cellid.setText("")
-            
-            try:
+        value = self.dlg.le_cellid.text().strip()
+        if not value:
+            return
+        self.dlg.lw_cellids.addItem(value)
+        self.dlg.le_cellid.setText("")
+
+        try:
+            if self.dlg.cb_dggstype_2.currentText() == "UBER H3":
                 res = h3.get_resolution(value)
-                self.dlg.sb_resolution_2.setValue(int(res))
-            except:
-                pass
-            
-        else:            
-            value = int(self.dlg.sb_cellid.value())
-            self.dlg.lw_cellids.addItem(str(value))
-            self.dlg.sb_cellid.setValue(0)
+            else:
+                # Z7/Z3/ZORDER digit string: 2 base cell digits + 1 per res
+                res = len(value) - 2
+            self.dlg.sb_resolution_2.setValue(int(res))
+        except:
+            pass
 
 
     def clearCellId(self):
@@ -372,8 +383,9 @@ class DGGRID:
         ok = bool(self.local_path)
         for cb in (self.dlg.cb_dggstype, self.dlg.cb_dggstype_2):
             for i in range(cb.count()):
-                if cb.itemText(i) not in ("", "UBER H3"):
-                    cb.model().item(i).setEnabled(ok)
+                t = cb.itemText(i)
+                if t not in ("", "UBER H3"):
+                    cb.model().item(i).setEnabled(ok and (cb is self.dlg.cb_dggstype or t in HIER_SYS))
             if not ok:
                 cb.setCurrentText("UBER H3")
         self.dlg.pb_options.setEnabled(ok)
@@ -506,7 +518,8 @@ class DGGRID:
         else:
             layer = ds.CreateLayer(layer_name, srs, ogr.wkbPoint)
 
-        layer.CreateField(ogr.FieldDefn("global_id", ogr.OFTInteger64))
+        hier_ids = self.dlg.tabWidget.currentIndex() == 1
+        layer.CreateField(ogr.FieldDefn("global_id", ogr.OFTString if hier_ids else ogr.OFTInteger64))
         defn = layer.GetLayerDefn()
         
         for en, feat_ in enumerate(features, 1):
@@ -708,15 +721,16 @@ class DGGRID:
             lw_cnt = self.dlg.lw_cellids.count()
             cell_id_list = set([self.dlg.lw_cellids.item(x).text() for x in range(lw_cnt)])
             
-            seqnum_file_path = os.path.join(working_folder_path, "seqnums_" + tmp_uuid + ".txt")
+            seqnum_file_path = os.path.join(working_folder_path, "cellids_" + tmp_uuid + ".txt")
             
             if create_seqnum:
                 with open(seqnum_file_path, "w") as f:
-                    f.write(",\n".join(cell_id_list)+"\n")
+                    f.write("\n".join(cell_id_list)+"\n")
             
             dggrid_operation = "GENERATE_GRID"
-            clip_subset_type = "SEQNUMS"
+            clip_subset_type = "ADDRESS_FILES"
             dggs_type = self.dlg.cb_dggstype_2.currentText()
+            sysn = HIER_SYS.get(dggs_type, "Z7")
             dggs_res_spec = self.dlg.sb_resolution_2.value()
             
             clip_region_files = seqnum_file_path
@@ -744,7 +758,11 @@ class DGGRID:
                 "point_output_type": point_output_type,
                 "point_output_file_name" : point_output_file_name,
                 "longitude_wrap_mode" : "UNWRAP_EAST",
-                "output_address_type": "SEQNUM"
+                "input_address_type": "HIERNDX",
+                "input_hier_ndx_system": sysn,
+                "input_hier_ndx_form": "DIGIT_STRING",
+                "hier_indexing_system_type": sysn,
+                **hierOutMeta(sysn)
             }
             
             if self.dlg.chb_neighbor_2.isChecked():
@@ -1029,7 +1047,7 @@ class DGGRID:
                     
                     for s in glob(os.path.join(working_folder_path, "*" + tmp_uuid + ".*")):
                         if not self.dlg.chb_metafile_2.isChecked():
-                            if ("seqnums_" in s):
+                            if ("cellids_" in s):
                                 os.remove(s)
                     
                     if not self.dlg.chb_metafile_2.isChecked():
@@ -1173,7 +1191,7 @@ class DGGRID:
             
             self.dlg.cb_dggstype.insertSeparator(15)
             self.dlg.cb_dggstype_2.insertSeparator(15)
-            self.dlg.le_cellid.setVisible(False)
+            self.dlg.sb_cellid.setVisible(False)
             
             self.dlg.btn_canvasExtent.clicked.connect(self.getCanvasExtent)
             self.dlg.btn_layerextent.clicked.connect(self.getLayerExtent)
