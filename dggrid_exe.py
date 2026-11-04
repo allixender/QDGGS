@@ -8,7 +8,7 @@ import tarfile
 import tempfile
 import zipfile
 
-from qgis.core import QgsApplication, QgsBlockingNetworkRequest
+from qgis.core import QgsApplication, QgsBlockingNetworkRequest, QgsSettings
 from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
@@ -46,6 +46,14 @@ def cachedExe():
     except OSError:
         return None
     return exe if os.path.isfile(exe) else None
+
+
+def findExe():
+    # own dggrid (eg conda, with GDAL) via advanced settings, else the pinned portable
+    own = QgsSettings().value("dggrid/executable", "")
+    if own and os.path.isfile(own):
+        return own
+    return cachedExe()
 
 
 def _get(url):

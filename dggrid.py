@@ -342,7 +342,7 @@ class DGGRID:
                 self.dlg.lw_cellids.takeItem(selected_row)
 
     def download_exe(self):
-        self.local_path = dggrid_exe.cachedExe()
+        self.local_path = dggrid_exe.findExe()
 
         if self.local_path is None:
             res = QMessageBox.question(None, "Message", f"DGGRID {dggrid_exe.RELEASE} executable is not available. Do you want to download?")
