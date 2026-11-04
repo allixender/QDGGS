@@ -32,7 +32,7 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
-from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes
+from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
 
 from osgeo import ogr, osr
 import os, subprocess, uuid, sys, importlib
@@ -351,6 +351,19 @@ class DGGRID:
                     self.local_path = dggrid_exe.downloadExe()
                 except Exception as e:
                     QMessageBox.critical(None, "ERROR", f"DGGRID download failed:\n{e}")
+
+    def runDggrid(self, meta_file_path):
+        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        p = subprocess.run([self.local_path, meta_file_path], capture_output=True, text=True,
+                           cwd=os.path.dirname(meta_file_path), creationflags=flags)
+        log = p.stdout + p.stderr
+        ok = p.returncode == 0
+        QgsMessageLog.logMessage(log, "DGGRID", Qgis.MessageLevel.Info if ok else Qgis.MessageLevel.Critical)
+        if not ok:
+            lines = log.splitlines()
+            i = next((n for n, l in enumerate(lines) if "FATAL" in l), max(len(lines) - 4, 0))
+            QMessageBox.critical(None, "DGGRID", "\n".join(lines[i:i + 4]) or f"dggrid exit code {p.returncode}")
+        return ok
 
     def setDggridAvailable(self):
         # without dggrid only UBER H3 (python h3) works
@@ -860,7 +873,6 @@ class DGGRID:
         self.dlg.setEnabled(False)
         self.dlg.processEvents()
 
-        exe_path = self.local_path
         
         
         if dgg_type == "UBER H3_t1":
@@ -927,9 +939,8 @@ class DGGRID:
                 with open(meta_file_path, "w") as f:
                     f.write(meta)
     
-                cmd = [exe_path, meta_file_path]
-    
-                subprocess.call(cmd)
+                if not self.runDggrid(meta_file_path):
+                    raise RuntimeError("dggrid failed, see log panel DGGRID")
                 
                 if self.dlg.tabWidget.currentIndex() == 0:
                 
@@ -1119,10 +1130,7 @@ class DGGRID:
             with open(meta_file_path, "w") as f:
                 f.write(meta)
                 
-            exe_path = self.local_path
-            cmd = [exe_path, meta_file_path]
-
-            subprocess.call(cmd)
+            self.runDggrid(meta_file_path)
             
             
             self.dlg.btn_execute.setText("GENERATE")
