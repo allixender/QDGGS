@@ -32,14 +32,12 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
+from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes
 
 from osgeo import ogr, osr
-from shapely.wkt import loads
 import os, requests, platform, stat, subprocess, uuid, sys
 from collections import defaultdict
 from glob import glob
-from shapely.geometry import box
-from shapely.geometry import Polygon
 
 try:
     import h3
@@ -47,6 +45,11 @@ try:
     h3_chc = 1
 except:
     h3_chc = 0
+
+
+def h3CellGeom(cell):
+    ring = [QgsPointXY(lng, lat) for lat, lng in h3.cell_to_boundary(cell)]
+    return QgsGeometry.fromPolygonXY([ring + ring[:1]])
 
 class DGGRID:
     """QGIS Plugin Implementation."""
@@ -602,10 +605,9 @@ class DGGRID:
         layer.CreateField(ogr.FieldDefn("global_id", ogr.OFTString))
         defn = layer.GetLayerDefn()
         
-        for global_id, geom_shapely in hexagons:
-            
-            geom_wkt = geom_shapely.wkt
-            geom_ogr = ogr.CreateGeometryFromWkt(geom_wkt)
+        for global_id, geom in hexagons:
+
+            geom_ogr = ogr.CreateGeometryFromWkt(geom.asWkt())
             
             if output_type == "KML": geom_ogr.SwapXY()
             
@@ -681,9 +683,9 @@ class DGGRID:
             
             else:
                 clip_subset_type = "SHAPEFILE"
-                clip_geom = box(minx, miny, maxx, maxy)
+                clip_geom = QgsGeometry.fromRect(QgsRectangle(minx, miny, maxx, maxy))
                 if create_region:
-                    clip_region_files = self.createShapefile([clip_geom.wkt], tmp_uuid)
+                    clip_region_files = self.createShapefile([clip_geom.asWkt()], tmp_uuid)
                 else:
                     outfile_name = f"region_{tmp_uuid}.shp"
                     clip_region_files = os.path.join(self.dlg.le_wdir.text(), outfile_name)
@@ -774,26 +776,15 @@ class DGGRID:
         return meta
     
     def polygon_to_h3(self, geom, res):
-        if geom.geom_type == "Polygon":
-            exterior = [(lat, lng) for lng, lat in geom.exterior.coords]
-            holes = [
-                [(lat, lng) for lng, lat in ring.coords]
-                for ring in geom.interiors
-            ]
-            poly = LatLngPoly(exterior, holes)
-            return h3.polygon_to_cells(poly, res)
-
-        elif geom.geom_type == "MultiPolygon":
-            cells = set()
-            for poly_geom in geom.geoms:
-                exterior = [(lat, lng) for lng, lat in poly_geom.exterior.coords]
-                holes = [
-                    [(lat, lng) for lng, lat in ring.coords]
-                    for ring in poly_geom.interiors
-                ]
-                poly = LatLngPoly(exterior, holes)
-                cells.update(h3.polygon_to_cells(poly, res))
+        cells = set()
+        if geom.type() != QgsWkbTypes.PolygonGeometry:
             return cells
+        parts = geom.asMultiPolygon() if geom.isMultipart() else [geom.asPolygon()]
+        for rings in parts:
+            latlng = [[(p.y(), p.x()) for p in ring] for ring in rings]
+            poly = LatLngPoly(latlng[0], *latlng[1:])
+            cells.update(h3.polygon_to_cells(poly, res))
+        return cells
         
     def get_neighbors(self, h3_id, k):
         neighbors = h3.grid_disk(h3_id, k)
@@ -816,7 +807,7 @@ class DGGRID:
                 maxx = self.dlg.sb_extent_maxx.value()
                 maxy = self.dlg.sb_extent_maxy.value()
                 
-                region_geom = box(minx, miny, maxx, maxy)
+                region_geom = QgsGeometry.fromRect(QgsRectangle(minx, miny, maxx, maxy))
                 
                 all_cells = self.polygon_to_h3(region_geom, resolution)
             
@@ -829,8 +820,7 @@ class DGGRID:
                 if len(layers) > 0:                        
                     features = layers[0].getFeatures()
                     for feat in features:
-                        wkt = feat.geometry().asWkt()
-                        geom_list.append(loads(wkt))
+                        geom_list.append(QgsGeometry(feat.geometry()))
                         
                     for geom in geom_list:
                         cells = self.polygon_to_h3(geom, resolution)
@@ -838,9 +828,7 @@ class DGGRID:
             
             hexagons = []
             for cell in all_cells:
-                boundary = h3.cell_to_boundary(cell)
-                hexagon = Polygon([(lng, lat) for lat, lng in boundary])
-                hexagons.append([cell, hexagon])
+                hexagons.append([cell, h3CellGeom(cell)])
             
             self.createGPKG2(hexagons, output_folder_path)
             
@@ -892,9 +880,7 @@ class DGGRID:
         
                 hexagons = []
                 for cell in all_cells:
-                    boundary = h3.cell_to_boundary(cell)
-                    hexagon = Polygon([(lng, lat) for lat, lng in boundary])
-                    hexagons.append([cell, hexagon])
+                    hexagons.append([cell, h3CellGeom(cell)])
                 
                 self.createGPKG2(hexagons, output_folder_path, out_type="polygon")
                 
@@ -908,9 +894,7 @@ class DGGRID:
         
                 hexagons = []
                 for cell in all_cells:
-                    boundary = h3.cell_to_boundary(cell)
-                    hexagon = Polygon([(lng, lat) for lat, lng in boundary])
-                    hexagons.append([cell, hexagon])
+                    hexagons.append([cell, h3CellGeom(cell)])
                 
                 self.createGPKG2(hexagons, output_folder_path, out_type="neighbor")
             
@@ -924,9 +908,7 @@ class DGGRID:
         
                 hexagons = []
                 for cell in all_cells:
-                    boundary = h3.cell_to_boundary(cell)
-                    hexagon = Polygon([(lng, lat) for lat, lng in boundary])
-                    hexagons.append([cell, hexagon])
+                    hexagons.append([cell, h3CellGeom(cell)])
                 
                 self.createGPKG2(hexagons, output_folder_path, out_type="children", child_res=child_res)
         
