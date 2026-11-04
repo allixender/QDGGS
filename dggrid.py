@@ -35,11 +35,11 @@ from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordi
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes
 
 from osgeo import ogr, osr
-import os, requests, platform, stat, subprocess, uuid, sys, importlib
+import os, subprocess, uuid, sys, importlib
 from collections import defaultdict
 from glob import glob
 
-from . import deps
+from . import deps, dggrid_exe
 deps.addDepsPath()
 
 try:
@@ -342,55 +342,17 @@ class DGGRID:
                 self.dlg.lw_cellids.takeItem(selected_row)
 
     def download_exe(self):
-        folder = os.path.dirname(__file__)
-        
-        uname = platform.uname()
-        cpu = uname.machine.lower()
-        opsystem = uname.system.lower()
-        
-        files = {
-            'linux-aarch64': 'https://github.com/allixender/dggrid4py/releases/download/v0.3.2/dggrid-linux-aarch-gnu',
-            'linux-x86_64': 'https://github.com/allixender/dggrid4py/releases/download/v0.3.2/dggrid-linux-x64',
-            'darwin-arm64': 'https://github.com/allixender/dggrid4py/releases/download/v0.3.2/dggrid-macos-aarch',
-            'windows-amd64': 'https://github.com/allixender/DGGRID/releases/download/v8.43b-1/dggrid-windows.exe'
-        }
+        self.local_path = dggrid_exe.cachedExe()
 
-        url = files.get(f"{opsystem}-{cpu}", None)
-        if url is None:
-            raise ValueError(f"No portable executable available for {opsystem} {cpu}. Please use dggrid4py with a local DGGRID installation.")
-                        
-        filename = os.path.split(url)[-1]
-        self.local_path = os.path.join(folder, filename)
-
-        if not os.path.isfile(self.local_path):
-            res = QMessageBox.question(None, "Message", """Executable file is not available. Do you want to download?""")
-            if res == QMessageBox.Yes:
+        if self.local_path is None:
+            res = QMessageBox.question(None, "Message", f"DGGRID {dggrid_exe.RELEASE} executable is not available. Do you want to download?")
+            if res == QMessageBox.StandardButton.Yes:
                 try:
-                    try:
-                        response = requests.get(url, stream=True)
-                    except:
-                        response = requests.get(url, stream=True, verify=False)
-                        
-                    response.raise_for_status()
-                    
-                    with open(self.local_path, 'wb') as f:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            f.write(chunk)
+                    self.local_path = dggrid_exe.downloadExe()
+                except Exception as e:
+                    QMessageBox.critical(None, "ERROR", f"DGGRID download failed:\n{e}")
 
-                    current_permissions = os.stat(self.local_path).st_mode
-                    try:
-                        os.chmod(self.local_path, current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-                    except:
-                        pass
-                    
-                    if os.path.isfile(self.local_path):
-                        self.dlg.show()
-
-                except:
-                    pass            
-            else:
-                pass
-        else:
+        if self.local_path:
             self.dlg.show()
     
     def createShapefile(self, clip_wkts, tmp_uuid, crs_wkt=None):

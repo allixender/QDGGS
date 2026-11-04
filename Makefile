@@ -38,13 +38,13 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	dggrid.py dggrid_dialog.py DrawRect.py deps.py
+	dggrid.py dggrid_dialog.py DrawRect.py deps.py dggrid_exe.py
 
 PLUGINNAME = dggrid
 
 PY_FILES = \
 	__init__.py \
-	dggrid.py dggrid_dialog.py DrawRect.py deps.py
+	dggrid.py dggrid_dialog.py DrawRect.py deps.py dggrid_exe.py
 
 UI_FILES = dggrid_dialog_base.ui
 
