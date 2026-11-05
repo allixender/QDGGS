@@ -62,6 +62,9 @@
         <height>25</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>cell count grows per res by the aperture (x7 for 7H, x4 for 4H/4T/4D, x3 for 3H). whole earth ISEA7H r7 is already ca 8M cells, above 1M you get asked first</string>
+      </property>
       <property name="maximum">
        <number>35</number>
       </property>
@@ -93,6 +96,9 @@
         <width>100</width>
         <height>25</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>DGGS preset. 7H/3H/4H hexagons (aperture 7/3/4), 4T triangles, 4D diamonds, 43H mixed aperture. IGEO7v2 = aperture 7 hex on WGS84 with Z7 index. UBER H3 runs via python h3, no dggrid needed</string>
       </property>
       <item>
        <property name="text">
@@ -206,6 +212,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>max lat, degrees (EPSG:4326)</string>
+      </property>
       <property name="decimals">
        <number>8</number>
       </property>
@@ -224,6 +233,9 @@
         <width>110</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>max lon, degrees (EPSG:4326)</string>
       </property>
       <property name="decimals">
        <number>8</number>
@@ -244,6 +256,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>min lon, degrees (EPSG:4326)</string>
+      </property>
       <property name="decimals">
        <number>8</number>
       </property>
@@ -263,6 +278,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>min lat, degrees (EPSG:4326)</string>
+      </property>
       <property name="decimals">
        <number>8</number>
       </property>
@@ -274,6 +292,9 @@
       </property>
      </widget>
      <widget class="QComboBox" name="cb_layers">
+      <property name="toolTip">
+       <string>layer for layer extent / clip by features</string>
+      </property>
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -292,6 +313,9 @@
         <height>25</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>extent of the current map view</string>
+      </property>
       <property name="text">
        <string>Canvas Extent</string>
       </property>
@@ -306,7 +330,7 @@
        </rect>
       </property>
       <property name="toolTip">
-       <string>Draw Extent</string>
+       <string>draw a rectangle on the map</string>
       </property>
       <property name="text">
        <string>...</string>
@@ -320,6 +344,9 @@
         <width>261</width>
         <height>28</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>extent of the selected layer</string>
       </property>
       <property name="text">
        <string>Layer Extent</string>
@@ -347,6 +374,9 @@
         <height>25</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>clear the extent</string>
+      </property>
       <property name="text">
        <string>RESET</string>
       </property>
@@ -359,6 +389,9 @@
         <width>141</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>clip by the polygons of the layer, not just its extent (reprojected to wgs84 first)</string>
       </property>
       <property name="text">
        <string>Use features of layer</string>
@@ -375,6 +408,9 @@
         <width>101</width>
         <height>21</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>no clipping, whole globe. careful with higher res</string>
       </property>
       <property name="text">
        <string>WHOLE EARTH</string>
@@ -408,6 +444,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>cell polygons</string>
+      </property>
       <property name="text">
        <string>Polygon</string>
       </property>
@@ -424,6 +463,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>cell centre points</string>
+      </property>
       <property name="text">
        <string>Centroid</string>
       </property>
@@ -436,6 +478,9 @@
         <width>101</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>keep the dggrid metafile + clip region shp in the working dir, eg. to rerun dggrid from the cli</string>
       </property>
       <property name="text">
        <string>Metafile</string>
@@ -451,7 +496,7 @@
        </rect>
       </property>
       <property name="toolTip">
-       <string>hierarchical cell ids (Z7/Z3/ZORDER digit string) instead of SEQNUM</string>
+       <string>cell ids as hierarchical index digit string (Z7/Z3/ZORDER) instead of SEQNUM. needed if you want to select cells later and use them in 'Grid Cell From Cell Id'</string>
       </property>
       <property name="text">
        <string>Hier. index ids</string>
@@ -489,6 +534,9 @@
         <width>111</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>only grids with a hierarchical index: Z7 (7H, IGEO7v2), Z3 (3H), ZORDER (4H), plus H3. SEQNUM ids are not reliable for id -&gt; cell, so not offered</string>
       </property>
       <item>
        <property name="text">
@@ -559,6 +607,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>taken from the cell id (Z7/Z3/ZORDER: length - 2), all ids should have the same res</string>
+      </property>
       <property name="readOnly">
        <bool>true</bool>
       </property>
@@ -595,6 +646,9 @@
        <height>31</height>
       </rect>
      </property>
+     <property name="toolTip">
+      <string>add the id to the list</string>
+     </property>
      <property name="font">
       <font>
        <weight>75</weight>
@@ -613,6 +667,9 @@
        <width>111</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="toolTip">
+      <string>remove selected ids from the list</string>
      </property>
      <property name="font">
       <font>
@@ -633,6 +690,9 @@
        <height>31</height>
       </rect>
      </property>
+     <property name="toolTip">
+      <string>empty the list</string>
+     </property>
      <property name="font">
       <font>
        <weight>75</weight>
@@ -651,6 +711,9 @@
        <width>111</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="toolTip">
+      <string>txt with ids, comma/space/newline separated. lines starting with # are skipped, so the neighbours/children txt output loads back directly</string>
      </property>
      <property name="font">
       <font>
@@ -718,6 +781,9 @@
         <height>30</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>hierarchical children at res+1 (7 for Z7). dggrid: only writes a txt id list (chd_...txt) into the working dir -&gt; BROWSE that file and GENERATE again for the geometries (2 runs). H3: added as layer directly</string>
+      </property>
       <property name="text">
        <string>Children</string>
       </property>
@@ -730,6 +796,9 @@
         <width>121</width>
         <height>30</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>neighbour ids of the listed cells. dggrid: only writes a txt id list (nbr_...txt) into the working dir -&gt; BROWSE that file and GENERATE again for the cell geometries (2 runs). H3: added as layer directly</string>
       </property>
       <property name="text">
        <string>Neighbors</string>
@@ -747,6 +816,9 @@
         <height>20</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>keep the dggrid metafile + cell id txt in the working dir</string>
+      </property>
       <property name="text">
        <string>Metafile</string>
       </property>
@@ -760,6 +832,9 @@
        <width>111</width>
        <height>31</height>
       </rect>
+     </property>
+     <property name="toolTip">
+      <string>ids of the selected cells in the active layer. layer needs hier. index ids ('Hier. index ids' on the first tab)</string>
      </property>
      <property name="font">
       <font>
@@ -788,6 +863,9 @@
      </property>
     </widget>
     <widget class="QLineEdit" name="le_cellid">
+     <property name="toolTip">
+      <string>one cell id, eg. 00010224545 (IGEO7v2 r9) or a H3 hex id, then ADD</string>
+     </property>
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -869,6 +947,9 @@
       <height>24</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>output folder. empty -&gt; QGIS processing temp folder, gone when QGIS closes</string>
+    </property>
     <property name="frame">
      <bool>true</bool>
     </property>
@@ -887,6 +968,9 @@
       <width>30</width>
       <height>24</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>choose output folder</string>
     </property>
     <property name="text">
      <string>...</string>
@@ -920,6 +1004,9 @@
       <height>31</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>load the result into the map</string>
+    </property>
     <property name="layoutDirection">
      <enum>Qt::LeftToRight</enum>
     </property>
@@ -938,6 +1025,9 @@
       <width>201</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>optional, default name from grid type and res</string>
     </property>
     <property name="maxLength">
      <number>255</number>
@@ -977,6 +1067,9 @@
       <height>31</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>show metafile options, neighbours/children and the metafile editor</string>
+    </property>
     <property name="text">
      <string>Advanced</string>
     </property>
@@ -989,6 +1082,9 @@
       <width>81</width>
       <height>22</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>output format</string>
     </property>
     <item>
      <property name="text">
@@ -1025,6 +1121,9 @@
      <width>81</width>
      <height>81</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>metafile editor: dggrid parameters by hand (keys see DGGRID 9.1 docs), 'Load From GUI' gives a start</string>
    </property>
    <property name="font">
     <font>
