@@ -134,7 +134,7 @@
     </font>
    </property>
    <property name="title">
-    <string>Metada File Directory</string>
+    <string>Metafile Directory</string>
    </property>
    <widget class="QLineEdit" name="le_wdir">
     <property name="enabled">
