@@ -497,12 +497,12 @@
       </item>
       <item>
        <property name="text">
-        <string>SUPERFUND</string>
+        <string>IGEO7v2</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>PLANETRISK</string>
+        <string>FULLER7H</string>
        </property>
       </item>
       <item>
@@ -512,57 +512,17 @@
       </item>
       <item>
        <property name="text">
-        <string>ISEA4H</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>ISEA4T</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>ISEA4D</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>ISEA43H</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>IGEO7v2</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
         <string>FULLER3H</string>
        </property>
       </item>
       <item>
        <property name="text">
+        <string>ISEA4H</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
         <string>FULLER4H</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>FULLER4T</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>FULLER4D</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>FULLER43H</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>FULLER7H</string>
        </property>
       </item>
       <item>
@@ -598,6 +558,12 @@
         <width>111</width>
         <height>20</height>
        </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::NoButtons</enum>
       </property>
       <property name="maximum">
        <number>35</number>

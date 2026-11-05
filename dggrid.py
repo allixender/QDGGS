@@ -241,12 +241,15 @@ class DGGRID:
 
             if os.path.isfile(filePath):
                 with open(filePath) as f:
-                    cell_id_txt = f.read()
+                    # skip '# parent,' lines of the nbr/chd txt output
+                    cell_id_txt = "\n".join(l for l in f if not l.lstrip().startswith("#"))
             
                 is_h3 = self.dlg.cb_dggstype_2.currentText() == "UBER H3"
-                cell_id_list = set(i for i in re.split(r"[,\s]+", cell_id_txt) if i and (is_h3 or i.isdigit()))
+                cell_id_list = sorted(set(i for i in re.split(r"[,\s]+", cell_id_txt) if i and (is_h3 or i.isdigit())))
 
-                self.dlg.lw_cellids.addItems(sorted(cell_id_list))
+                self.dlg.lw_cellids.addItems(cell_id_list)
+                if cell_id_list:
+                    self.setResFromId(cell_id_list[0])
     
     def getSelectedCellIds(self):
         try:
@@ -371,6 +374,9 @@ class DGGRID:
         self.dlg.lw_cellids.addItem(value)
         self.dlg.le_cellid.setText("")
 
+        self.setResFromId(value)
+
+    def setResFromId(self, value):
         try:
             if self.dlg.cb_dggstype_2.currentText() == "UBER H3":
                 res = h3.get_resolution(value)
@@ -428,7 +434,7 @@ class DGGRID:
             for i in range(cb.count()):
                 t = cb.itemText(i)
                 if t not in ("", "UBER H3"):
-                    cb.model().item(i).setEnabled(ok and (cb is self.dlg.cb_dggstype or t in HIER_SYS))
+                    cb.model().item(i).setEnabled(ok)
             if not ok:
                 cb.setCurrentText("UBER H3")
         self.dlg.pb_options.setEnabled(ok)
@@ -1228,7 +1234,7 @@ class DGGRID:
             self.checkLayer()
             
             self.dlg.cb_dggstype.insertSeparator(15)
-            self.dlg.cb_dggstype_2.insertSeparator(15)
+            self.dlg.cb_dggstype_2.insertSeparator(self.dlg.cb_dggstype_2.findText("UBER H3"))
             self.dlg.sb_cellid.setVisible(False)
             
             self.dlg.btn_canvasExtent.clicked.connect(self.getCanvasExtent)
