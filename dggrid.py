@@ -267,7 +267,7 @@ class DGGRID:
         if oname == "pb_browsecellids":
             self.dlg.lw_cellids.clear()
 
-            filePath, _filter = QFileDialog.getOpenFileName(self.dlg, "Select cell id file","", 'txt(*.txt *.TXT)')
+            filePath, _filter = QFileDialog.getOpenFileName(self.dlg, "Select cell id file","", 'cell ids (*.txt *.csv *.TXT *.CSV)')
 
             if os.path.isfile(filePath):
                 with open(filePath) as f:
