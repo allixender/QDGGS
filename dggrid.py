@@ -33,7 +33,7 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
-from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProcessingUtils
+from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProcessingUtils, QgsSettings
 
 from osgeo import ogr, osr
 import os, subprocess, uuid, sys, importlib, re
@@ -336,6 +336,24 @@ class DGGRID:
     def workDir(self):
         # empty -> qgis processing temp folder (gone when qgis closes)
         return self.dlg.le_wdir.text().strip() or QgsProcessingUtils.tempFolder()
+
+    def loadUiSettings(self):
+        s = QgsSettings()
+        wdir = s.value("dggrid/ui/wdir", "", type=str)
+        if os.path.isdir(wdir):
+            self.dlg.le_wdir.setText(wdir)
+        self.dlg.cb_dtype.setCurrentText(s.value("dggrid/ui/format", self.dlg.cb_dtype.currentText(), type=str))
+        self.dlg.cb_add_to_layer.setChecked(s.value("dggrid/ui/add_to_map", self.dlg.cb_add_to_layer.isChecked(), type=bool))
+        self.dlg.cb_dggstype.setCurrentText(s.value("dggrid/ui/dggs_type", self.dlg.cb_dggstype.currentText(), type=str))
+        self.dlg.sb_resolution.setValue(s.value("dggrid/ui/res", self.dlg.sb_resolution.value(), type=int))
+
+    def saveUiSettings(self):
+        s = QgsSettings()
+        s.setValue("dggrid/ui/wdir", self.dlg.le_wdir.text().strip())
+        s.setValue("dggrid/ui/format", self.dlg.cb_dtype.currentText())
+        s.setValue("dggrid/ui/add_to_map", self.dlg.cb_add_to_layer.isChecked())
+        s.setValue("dggrid/ui/dggs_type", self.dlg.cb_dggstype.currentText())
+        s.setValue("dggrid/ui/res", self.dlg.sb_resolution.value())
 
     def outFolderCheck(self):
         folder_path = self.dlg.le_wdir.text().strip()
@@ -908,6 +926,8 @@ class DGGRID:
         if dgg_type.startswith("UBER H3") and not self.ensureH3():
             return
 
+        self.saveUiSettings()
+
         self.dlg.btn_execute.setText("GENERATING...")
         self.dlg.setEnabled(False)
         self.dlg.processEvents()
@@ -1245,6 +1265,7 @@ class DGGRID:
             self.dlg2.pb_cleartable.clicked.connect(self.optionsTable)
             self.dlg2.pb_run.clicked.connect(self.optionsTable)
 
+            self.loadUiSettings()
             self.setDggridAvailable()
             self.dlg.show()
             
