@@ -33,7 +33,7 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
-from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem
+from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProcessingUtils
 
 from osgeo import ogr, osr
 import os, subprocess, uuid, sys, importlib, re
@@ -333,10 +333,14 @@ class DGGRID:
                 
                 self.dlg.sb_resolution_2.setMaximum(35)
     
+    def workDir(self):
+        # empty -> qgis processing temp folder (gone when qgis closes)
+        return self.dlg.le_wdir.text().strip() or QgsProcessingUtils.tempFolder()
+
     def outFolderCheck(self):
-        folder_path = self.dlg.le_wdir.text()
+        folder_path = self.dlg.le_wdir.text().strip()
         
-        if os.path.isdir(folder_path):
+        if not folder_path or os.path.isdir(folder_path):
             self.dlg.lbl_wdir.setText("")
         else:
             self.dlg.lbl_wdir.setText('<html><head/><body><p><span style=" color:#ff0000;"> Invalid folder path! </span></p></body></html>')
@@ -413,7 +417,7 @@ class DGGRID:
     
     def createShapefile(self, clip_wkts, tmp_uuid, crs_wkt=None):
         outfile_name = f"region_{tmp_uuid}.shp"
-        outfile_path = os.path.join(self.dlg.le_wdir.text(), outfile_name)
+        outfile_path = os.path.join(self.workDir(), outfile_name)
         
         driver = ogr.GetDriverByName("ESRI Shapefile")
         ds = driver.CreateDataSource(outfile_path)
@@ -462,7 +466,7 @@ class DGGRID:
             
             suffix = 0
             while True:
-                outfile_path = os.path.join(self.dlg.le_wdir.text(), outfile_name) if suffix==0 else os.path.join(self.dlg.le_wdir.text(), outfile_name.replace(f".{ext}", f"_{suffix}.{ext}"))    
+                outfile_path = os.path.join(self.workDir(), outfile_name) if suffix==0 else os.path.join(self.workDir(), outfile_name.replace(f".{ext}", f"_{suffix}.{ext}"))    
                 if not os.path.isfile(outfile_path):
                     break
                 suffix += 1
@@ -474,7 +478,7 @@ class DGGRID:
     
     def createPath2(self, dtype, tmp_uuid):
         outfile_name_ = self.dlg.le_outFileName.text()
-        working_folder_path = self.dlg.le_wdir.text()
+        working_folder_path = self.workDir()
         resolution = self.dlg.sb_resolution_2.value()
         
         if outfile_name_:
@@ -485,7 +489,7 @@ class DGGRID:
             
             suffix = 0
             while True:
-                outfile_path = os.path.join(self.dlg.le_wdir.text(), outfile_name) if suffix==0 else os.path.join(self.dlg.le_wdir.text(), outfile_name.replace(".gpkg", f"_{suffix}.gpkg"))    
+                outfile_path = os.path.join(self.workDir(), outfile_name) if suffix==0 else os.path.join(self.workDir(), outfile_name.replace(".gpkg", f"_{suffix}.gpkg"))    
                 if not os.path.isfile(outfile_path):
                     break
                 suffix += 1
@@ -664,7 +668,7 @@ class DGGRID:
     
     
     def createMetaDict(self, tmp_uuid, create_seqnum=True, create_region=True):
-        working_folder_path = self.dlg.le_wdir.text()
+        working_folder_path = self.workDir()
         
         if self.dlg.tabWidget.currentIndex() == 0:
             
@@ -684,7 +688,7 @@ class DGGRID:
                     layers = QgsProject.instance().mapLayersByName(layerName)
                     if len(layers) > 0:
                         outfile_name = f"region_{tmp_uuid}.shp"
-                        out_path = os.path.join(self.dlg.le_wdir.text(), outfile_name)
+                        out_path = os.path.join(self.workDir(), outfile_name)
                         
                         # dggrid reads lon/lat, ignores .prj
                         wkt_list = [g.asWkt() for g in layerGeomsWgs84(layers[0])]
@@ -701,7 +705,7 @@ class DGGRID:
                     clip_region_files = self.createShapefile([clip_geom.asWkt()], tmp_uuid)
                 else:
                     outfile_name = f"region_{tmp_uuid}.shp"
-                    clip_region_files = os.path.join(self.dlg.le_wdir.text(), outfile_name)
+                    clip_region_files = os.path.join(self.workDir(), outfile_name)
             
             dggrid_operation = "GENERATE_GRID"
             dggs_type = self.dlg.cb_dggstype.currentText()
@@ -846,7 +850,7 @@ class DGGRID:
         if h3_chc == 0:
             QMessageBox.information(None, "ERROR", """H3 library is necessary for this grid type. Please install the library manually using OSGeo4W Shell and restart QGIS.\n (pip install h3)""")
         else:
-            output_folder_path = self.dlg.le_wdir.text()
+            output_folder_path = self.workDir()
             resolution = self.dlg.sb_resolution.value()
             
             if not self.dlg.chb_use_features.isChecked():
@@ -880,9 +884,9 @@ class DGGRID:
             
 
     def execute(self):        
-        working_folder_path = self.dlg.le_wdir.text()
+        working_folder_path = self.workDir()
         
-        if not os.path.isdir(self.dlg.le_wdir.text()):
+        if not os.path.isdir(working_folder_path):
             QMessageBox.critical(None, "ERROR", """Invalid working directory!""")
             return
         
@@ -914,7 +918,7 @@ class DGGRID:
             self.run_uber_h3()
 
         elif dgg_type == "UBER H3_t2":
-            output_folder_path = self.dlg.le_wdir.text()
+            output_folder_path = self.workDir()
             
             lw_cnt = self.dlg.lw_cellids.count()
             cell_id_list = set([self.dlg.lw_cellids.item(x).text() for x in range(lw_cnt)])
@@ -1149,16 +1153,16 @@ class DGGRID:
                 
             meta = self.createMetaFromDict(meta_dict)
             
-            self.dlg.btn_execute.setText("GENERATING...")
-            self.dlg.setEnabled(False)
-            self.dlg.processEvents()
-            
-            meta_folder_path = self.dlg2.le_wdir.text()
+            meta_folder_path = self.dlg2.le_wdir.text().strip() or QgsProcessingUtils.tempFolder()
             meta_file_name = f"metafile_{self.tmp_uuid2}"
             
             if not os.path.isdir(meta_folder_path):
                 QMessageBox.critical(None, "ERROR", """Invalid working directory!""")
                 return
+            
+            self.dlg.btn_execute.setText("GENERATING...")
+            self.dlg.setEnabled(False)
+            self.dlg.processEvents()
             
             meta_file_path = os.path.join(meta_folder_path, meta_file_name)
             
@@ -1168,7 +1172,7 @@ class DGGRID:
             self.runDggrid(meta_file_path)
             
             
-            self.dlg.btn_execute.setText("GENERATE")
+            self.dlg.btn_execute.setText("GENERATE GRIDS")
             self.dlg.setEnabled(True)
             self.dlg.processEvents()
             
@@ -1195,7 +1199,8 @@ class DGGRID:
             self.download_exe()
             
             self.dlg.setWindowIcon(QIcon(':/plugins/dggrid/icon.png'))
-            self.dlg.lbl_wdir.setText('<html><head/><body><p><span style=" color:#ff0000;"> Invalid folder path! </span></p></body></html>')
+            self.dlg.le_wdir.setPlaceholderText("(temporary, QGIS processing temp folder)")
+            self.dlg2.le_wdir.setPlaceholderText("(temporary, QGIS processing temp folder)")
 
             layers = [v.name() for v in QgsProject.instance().mapLayers().values()]
             self.dlg.cb_layers.clear()
