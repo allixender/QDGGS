@@ -1186,7 +1186,7 @@ class DGGRID:
         for r in range(row_cnt):
             table.removeRow(0)
         
-        item_list = [i for i in self.createMetaDict(self.tmp_uuid2, create_seqnum=False, create_region=False).items()]
+        item_list = [i for i in self.createMetaDict(self.tmp_uuid2).items()]
         
         for e, (k,v) in enumerate(item_list):
             table.insertRow(e)
@@ -1204,7 +1204,7 @@ class DGGRID:
         for r in range(row_cnt):
             table.removeRow(0)
         
-        item_list = [i for i in self.createMetaDict(self.tmp_uuid2, create_seqnum=False, create_region=False).items()]
+        item_list = [i for i in self.createMetaDict(self.tmp_uuid2).items()]
         
         for e, (k,v) in enumerate(item_list):
             table.insertRow(e)
