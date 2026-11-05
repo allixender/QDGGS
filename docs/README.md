@@ -1,6 +1,6 @@
 # DGGRID Create, user guide
 
-DGGRID Create is a QGIS plugin that generates Discrete Global Grid System (DGGS) cells as vector layers. It is a graphical frontend to DGGRID 9.1, the DGGS software by Kevin Sahr ([documentation](https://dggrid.readthedocs.io/)), and it creates Uber H3 cells with the `h3` Python package. Cells can be generated for an extent, for the polygons of a layer, for the whole earth, or from a list of cell ids. The step-by-step examples are in the [tutorial](TUTORIAL.md).
+DGGRID Create (QDGGS) is a QGIS plugin that generates Discrete Global Grid System (DGGS) cells as vector layers. It is a graphical frontend to DGGRID 9.1, the DGGS software by Kevin Sahr ([documentation](https://dggrid.readthedocs.io/)), and it creates Uber H3 cells with the `h3` Python package. Cells can be generated for an extent, for the polygons of a layer, for the whole earth, or from a list of cell ids. The step-by-step examples are in the [tutorial](TUTORIAL.md).
 
 ## Installation
 
