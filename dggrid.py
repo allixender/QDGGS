@@ -349,6 +349,7 @@ class DGGRID:
         self.dlg.cb_add_to_layer.setChecked(s.value("dggrid/ui/add_to_map", self.dlg.cb_add_to_layer.isChecked(), type=bool))
         self.dlg.cb_dggstype.setCurrentText(s.value("dggrid/ui/dggs_type", self.dlg.cb_dggstype.currentText(), type=str))
         self.dlg.sb_resolution.setValue(s.value("dggrid/ui/res", self.dlg.sb_resolution.value(), type=int))
+        self.dlg.chb_advanced.setChecked(s.value("dggrid/ui/advanced", False, type=bool))
 
     def saveUiSettings(self):
         s = QgsSettings()
@@ -357,6 +358,16 @@ class DGGRID:
         s.setValue("dggrid/ui/add_to_map", self.dlg.cb_add_to_layer.isChecked())
         s.setValue("dggrid/ui/dggs_type", self.dlg.cb_dggstype.currentText())
         s.setValue("dggrid/ui/res", self.dlg.sb_resolution.value())
+
+    def showAdvanced(self):
+        on = self.dlg.chb_advanced.isChecked()
+        QgsSettings().setValue("dggrid/ui/advanced", on)
+        boxes = (self.dlg.chb_metafile, self.dlg.chb_metafile_2, self.dlg.chb_neighbor_2, self.dlg.chb_children_2)
+        for w in boxes + (self.dlg.pb_options,):
+            w.setVisible(on)
+        if not on:
+            for w in boxes:
+                w.setChecked(False)
 
     def outFolderCheck(self):
         folder_path = self.dlg.le_wdir.text().strip()
@@ -1260,6 +1271,7 @@ class DGGRID:
             
             self.dlg.cb_layers.currentTextChanged.connect(self.checkLayer)
             
+            self.dlg.chb_advanced.toggled.connect(self.showAdvanced)
             self.dlg.pb_options.clicked.connect(self.optionsScreen)
             self.dlg2.pb_loadFromGui.clicked.connect(self.loadFromGui)
             
@@ -1272,6 +1284,7 @@ class DGGRID:
             self.dlg2.pb_run.clicked.connect(self.optionsTable)
 
             self.loadUiSettings()
+            self.showAdvanced()
             self.setDggridAvailable()
             self.dlg.show()
             
