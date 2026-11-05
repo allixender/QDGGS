@@ -33,7 +33,7 @@ from .dggrid_dialog import DGGRIDDialog, OptionsWindow
 from .DrawRect import RectangleMapTool, extentToWgs84
 from qgis.core import QgsVectorLayer, QgsProject, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsMapLayer
 from qgis.core import QgsGeometry, QgsRectangle, QgsPointXY, QgsWkbTypes, QgsMessageLog, Qgis
-from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProcessingUtils, QgsSettings
+from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProcessingUtils, QgsSettings, QgsDistanceArea
 
 from osgeo import ogr, osr
 import os, subprocess, uuid, sys, importlib, re
@@ -75,6 +75,36 @@ def layerGeomsWgs84(layer):
 def h3CellGeom(cell):
     ring = [QgsPointXY(lng, lat) for lat, lng in h3.cell_to_boundary(cell)]
     return QgsGeometry.fromPolygonXY([ring + ring[:1]])
+
+EARTH_M2 = 510065621724.0  # wgs84 ellipsoid surface
+
+
+def cellCount(exe, dggs_type, res, wd):
+    # exact whole earth count via dggrid OUTPUT_STATS, ca 10 ms
+    meta = os.path.join(wd, f"stats_{uuid.uuid4()}.meta")
+    with open(meta, "w") as f:
+        f.write(f"dggrid_operation OUTPUT_STATS\ndggs_type {dggs_type}\ndggs_res_spec {res}\n")
+    try:
+        p = subprocess.run([exe, meta], capture_output=True, text=True, cwd=wd, timeout=10,
+                           creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+    finally:
+        os.remove(meta)
+    table = False
+    for l in p.stdout.splitlines():
+        t = l.split()
+        if t[:1] == ["Res"]:
+            table = True
+        elif table and len(t) >= 2 and t[0] == str(res):
+            return int(t[1].replace(",", ""))
+    return None
+
+
+def areaFraction(geoms):
+    d = QgsDistanceArea()
+    d.setSourceCrs(QgsCoordinateReferenceSystem("EPSG:4326"), QgsProject.instance().transformContext())
+    d.setEllipsoid("WGS84")
+    return min(1.0, sum(d.measureArea(g) for g in geoms) / EARTH_M2)
+
 
 class DGGRID:
     """QGIS Plugin Implementation."""
@@ -424,6 +454,30 @@ class DGGRID:
         if self.dlg.tabWidget.currentIndex() == 1:
             return True
         return self.dlg.chb_hierndx.isChecked() and self.dlg.cb_dggstype.currentText() in HIER_SYS
+
+    def bigRunOk(self, dggs_type):
+        # rough estimate: whole earth count x share of clip area, ask above 1M
+        res = self.dlg.sb_resolution.value()
+        try:
+            if self.dlg.chb_wholeEarth.isChecked():
+                frac = 1.0
+            elif self.dlg.chb_use_features.isChecked():
+                layers = QgsProject.instance().mapLayersByName(self.dlg.cb_layers.currentText())
+                frac = areaFraction(layerGeomsWgs84(layers[0])) if layers else 1.0
+            else:
+                frac = areaFraction([QgsGeometry.fromRect(QgsRectangle(
+                    self.dlg.sb_extent_minx.value(), self.dlg.sb_extent_miny.value(),
+                    self.dlg.sb_extent_maxx.value(), self.dlg.sb_extent_maxy.value()))])
+            if dggs_type == "UBER H3":
+                total = h3.get_num_cells(res)
+            else:
+                total = cellCount(self.local_path, dggs_type, res, self.workDir())
+            n = int(total * frac)
+        except Exception:
+            return True
+        if n < 1000000:
+            return True
+        return QMessageBox.question(None, "DGGRID", f"ca {n:,} cells at res {res}, that takes a while and lots of disk.\nContinue?") == QMessageBox.StandardButton.Yes
 
     def runDggrid(self, meta_file_path):
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -941,6 +995,9 @@ class DGGRID:
                 return
 
         if dgg_type.startswith("UBER H3") and not self.ensureH3():
+            return
+
+        if self.dlg.tabWidget.currentIndex() == 0 and not self.bigRunOk(self.dlg.cb_dggstype.currentText()):
             return
 
         self.saveUiSettings()
