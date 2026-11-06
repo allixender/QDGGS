@@ -13,7 +13,7 @@ Open the plugin with its toolbar icon or via Plugins → DGGRID Create. On first
 
 You can leave the Working Directory empty for these examples. The results then go to the QGIS temporary folder, which is deleted when QGIS closes. Add grid layer to map is ticked by default, so every result appears as a new layer.
 
-![The plugin dialog after the first start](img/00-dialog.png)
+
 
 ## 1. ISEA7H cells for the map extent
 
@@ -25,9 +25,11 @@ The simplest case is a grid for the area that is currently visible on the map. T
 4. keep Polygon ticked, alternatively tick Centroid if you rather want the cell centre points;
 5. press GENERATE GRIDS.
 
+![ISEA7H dialog settings](img/01-isea7h-dialog.png)
+
 The result is a layer `dggrid_isea7h_r9` with one polygon per cell and the SEQNUM in the field `global_id`. Instead of the map extent, Layer Extent takes the extent of the layer selected in the Query Area list, and the `...` button lets you draw a rectangle on the map.
 
-![ISEA7H dialog settings](img/01-isea7h-dialog.png)
+
 
 ![ISEA7H resolution 9 cells over Tartu](img/01-isea7h-result.png)
 
